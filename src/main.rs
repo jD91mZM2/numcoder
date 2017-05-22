@@ -18,7 +18,7 @@ fn main() {
 
 	let next = args.next();
 	if next.is_none() {
-		writeln!(stderr, "Usage: Numcoder <encode/decode>").unwrap();
+		writeln!(stderr, "Usage: numcoder <encode/decode>").unwrap();
 		return;
 	}
 	let next = next.unwrap();
