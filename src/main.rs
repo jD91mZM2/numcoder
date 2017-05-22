@@ -47,7 +47,7 @@ fn main() {
 			let zero = BigUint::zero();
 			let max = BigUint::from_u16(std::u8::MAX as u16 + 1).unwrap(); // Will not fail
 
-			let mut string = String::new();
+			let mut bytes = Vec::new();
 			while num > zero {
 				let shifted = num >> 8;
 				num = shifted.clone();
@@ -58,10 +58,16 @@ fn main() {
 					writeln!(stderr, "Could not make BigInt into u8.").unwrap();
 					return;
 				}
-				string.push(byte.unwrap() as char);
+				bytes.push(byte.unwrap());
+			}
+			let string = String::from_utf8(bytes);
+
+			if string.is_err() {
+				writeln!(stderr, "Not valid UTF-8").unwrap();
+				return;
 			}
 
-			println!("{}", string)
+			println!("{}", string.unwrap());
 		},
 		_ => {
 			writeln!(stderr, "Not a valid option").unwrap();
