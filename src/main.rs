@@ -195,7 +195,9 @@ where
 			println!("{}", result);
 		}
 	}
-	println!();
+	if verbose {
+		println!();
+	}
 
 	Some(result)
 }
@@ -217,7 +219,9 @@ fn decode(mut number: BigUint, limit: usize, length: usize, verbose: bool) -> Ve
 
 		result.push(n);
 	}
-	println!();
+	if verbose {
+		println!();
+	}
 
 	result
 }
