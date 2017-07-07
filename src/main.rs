@@ -63,18 +63,32 @@ fn main() {
 				parse_numbers(arg_or_ask!("Numbers: ")),
 				"Invalid input. Expected comma separated list of numbers"
 			);
+			let numbers = numbers.iter().map(|n| *n);
+
 			let limit = parse!(arg_or_ask!("Limit: "));
 			let length = get_length!(limit);
+			let mut verbose = false;
+			if let Some(arg) = args.next() {
+				if arg == "verbose" {
+					verbose = true;
+				}
+			}
 
-			if let Some(result) = encode(&mut stderr, numbers.iter().map(|n| *n), limit, length) {
+			if let Some(result) = encode(&mut stderr, numbers, limit, length, verbose) {
 				println!("{}", result);
 			}
 		},
 		"decode" => {
 			let number = parse!(arg_or_ask!("Number: "));
 			let limit = parse!(arg_or_ask!("Limit: "));
+			let mut verbose = false;
+			if let Some(arg) = args.next() {
+				if arg == "verbose" {
+					verbose = true;
+				}
+			}
 
-			let result = decode(number, limit, get_length!(limit));
+			let result = decode(number, limit, get_length!(limit), verbose);
 			println!(
 				"[{}]",
 				result
@@ -86,13 +100,9 @@ fn main() {
 		},
 		"encodestr" => {
 			let input = arg_or_ask!("Text: ");
-			if let Some(result) = encode(
-				&mut stderr,
-				input.trim().as_bytes().iter().map(|n| *n as u32),
-				256,
-				8
-			)
-			{
+			let input = input.trim().as_bytes().iter().map(|n| *n as u32);
+
+			if let Some(result) = encode(&mut stderr, input, 256, 8, false) {
 				println!("{}", result);
 			}
 		},
@@ -100,7 +110,7 @@ fn main() {
 			let input = arg_or_ask!("Number: ");
 			let input = parse!(input);
 
-			let result = decode(input, 256, 8);
+			let result = decode(input, 256, 8, false);
 			match String::from_utf8(result.iter().map(|n| *n as u8).collect()) {
 				Ok(string) => println!("{}", string),
 				Err(_) => writeln!(stderr, "Result is not valid UTF-8").unwrap(),
@@ -159,14 +169,13 @@ fn get_length(mut limit: usize) -> Result<usize, ()> {
 	Ok(length)
 }
 
-fn encode<'a, I>(stderr: &mut io::StderrLock, numbers: I, limit: usize, length: usize) -> Option<BigUint>
+fn encode<'a, I>(stderr: &mut io::StderrLock, numbers: I, limit: usize, length: usize, verbose: bool) -> Option<BigUint>
 where
 	I: DoubleEndedIterator<Item = u32>,
 {
 	let mut result = BigUint::zero();
 
 	for n in numbers.rev() {
-		println!("{} >= {}", n, limit);
 		if n >= limit as u32 {
 			writeln!(
 				stderr,
@@ -174,23 +183,41 @@ where
 			).unwrap();
 			return None;
 		}
+		if verbose {
+			print!("{} ({:b}) << {} = ", result, result, length);
+		}
 		result = result << length;
+		if verbose {
+			print!("{} ({:b})\n{} + {} = ", result, result, result, n);
+		}
 		result = result + BigUint::from_u32(n).unwrap();
+		if verbose {
+			println!("{}", result);
+		}
 	}
+	println!();
 
 	Some(result)
 }
-fn decode(mut number: BigUint, limit: usize, length: usize) -> Vec<u32> {
+fn decode(mut number: BigUint, limit: usize, length: usize, verbose: bool) -> Vec<u32> {
 	let bigzero = BigUint::zero();
 	let biglimit = BigUint::from_usize(limit).unwrap();
 
 	let mut result = Vec::new();
 	while number > bigzero {
 		let n = (&number % &biglimit).to_u32().unwrap();
+		if verbose {
+			println!("{} % {} = {}", number, biglimit, n);
+			print!("{} ({:b}) >> {} = ", number, number, length);
+		}
 		number = number >> length;
+		if verbose {
+			println!("{}", number);
+		}
 
 		result.push(n);
 	}
+	println!();
 
 	result
 }
