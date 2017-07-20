@@ -11,15 +11,12 @@ use std::io;
 use std::io::Write;
 
 fn main() {
-	let stderr = io::stderr();
-	let mut stderr = stderr.lock();
-
 	macro_rules! attempt {
 		($result:expr, $error:expr) => {
 			match $result {
 				Ok(something) => something,
 				Err(_) => {
-					writeln!(stderr, $error).unwrap();
+					eprintln!($error);
 					return;
 				}
 			}
@@ -47,11 +44,10 @@ fn main() {
 
 	let mode = args.next();
 	if mode.is_none() {
-		writeln!(
-			stderr,
+		eprintln!(
 			"Usage: numcoder <encodestr/decodestr> [text]\n\
             Usage: numcoder <encode/decode> [comma separated numbers] [limit] [\"verbose\"]"
-		).unwrap();
+		);
 		return;
 	}
 	let mode = mode.unwrap();
@@ -74,7 +70,7 @@ fn main() {
 				}
 			}
 
-			if let Some(result) = encode(&mut stderr, numbers, limit, length, verbose) {
+			if let Some(result) = encode(numbers, limit, length, verbose) {
 				println!("{}", result);
 			}
 		},
@@ -102,7 +98,7 @@ fn main() {
 			let input = arg_or_ask!("Text: ");
 			let input = input.trim().as_bytes().iter().map(|n| *n as u32);
 
-			if let Some(result) = encode(&mut stderr, input, 256, 8, false) {
+			if let Some(result) = encode(input, 256, 8, false) {
 				println!("{}", result);
 			}
 		},
@@ -113,11 +109,11 @@ fn main() {
 			let result = decode(input, 256, 8, false);
 			match String::from_utf8(result.iter().map(|n| *n as u8).collect()) {
 				Ok(string) => println!("{}", string),
-				Err(_) => writeln!(stderr, "Result is not valid UTF-8").unwrap(),
+				Err(_) => eprintln!("Result is not valid UTF-8"),
 			}
 		},
 		_ => {
-			writeln!(stderr, "Not a valid option").unwrap();
+			eprintln!("Not a valid option");
 			return;
 		},
 	}
@@ -169,7 +165,7 @@ fn get_length(mut limit: usize) -> Result<usize, ()> {
 	Ok(length)
 }
 
-fn encode<'a, I>(stderr: &mut io::StderrLock, numbers: I, limit: usize, length: usize, verbose: bool) -> Option<BigUint>
+fn encode<'a, I>(numbers: I, limit: usize, length: usize, verbose: bool) -> Option<BigUint>
 where
 	I: DoubleEndedIterator<Item = u32>,
 {
@@ -177,10 +173,7 @@ where
 
 	for n in numbers.rev() {
 		if n >= limit as u32 {
-			writeln!(
-				stderr,
-				"Limit less than or equals to one of the members in the array"
-			).unwrap();
+			eprintln!("Limit less than or equals to one of the members in the array");
 			return None;
 		}
 		if verbose {
